@@ -12,7 +12,7 @@ void dummy_task1(void)
 	{
 		PRINTF("IN TASK 1: %i +++++++++++++++\r\n", counter);
 		counter++;
-		rtos_delay(2000);d
+		rtos_delay(2000);
 	}
 }
 

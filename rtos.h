@@ -14,7 +14,6 @@
 #include "rtos_config.h"
 #include "stdint.h"
 
-#define RTOS_INVALID_TASK -1
 /*! @brief Autostart state type */
 typedef enum
 {
