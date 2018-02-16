@@ -43,7 +43,7 @@ int main(void)
 	BOARD_InitPins();
 	BOARD_BootClockRUN();
 	BOARD_InitDebugConsole();
-
+	PRINTF("EQUIPO EMBEBIDOS II \n");
 	rtos_create_task(dummy_task1, 1, kAutoStart);
 	rtos_create_task(dummy_task2, 2, kAutoStart);
 	rtos_create_task(dummy_task3, 1, kAutoStart);

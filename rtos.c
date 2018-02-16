@@ -12,6 +12,7 @@
 #include "rtos_config.h"
 #include "clock_config.h"
 
+#include "fsl_debug_console.h"
 #ifdef RTOS_ENABLE_IS_ALIVE
 #include "fsl_gpio.h"
 #include "fsl_port.h"
@@ -23,12 +24,15 @@
 #define FORCE_INLINE 	__attribute__((always_inline)) inline
 
 #define STACK_FRAME_SIZE			8
-#define STACK_LR_OFFSET				2
+#define STACK_LR_OFFSET				3
 #define STACK_PSR_OFFSET			1
 #define STACK_PSR_DEFAULT			0x01000000
 #define RTOS_INVALID_TASK			-1
 #define RTOS_MAX_NUMBER_OF_TASK		10
-#define STACK_PC_OFFSET				0x02
+#define STACK_PC_OFFSET				2
+
+#define SP_OFFSET_NORMAL 9
+#define SP_OFFSET_ISR 10
 
 #define TRUE 1
 #define FALSE 0
@@ -92,18 +96,20 @@ static void idle_task(void);
 // API implementation
 /**********************************************************************************/
 
-uint8_t CS_firstTime = TRUE;
+static uint8_t CS_firstTime = TRUE;
 
 void rtos_start_scheduler(void) {
 #ifdef RTOS_ENABLE_IS_ALIVE
     init_is_alive();
+    #endif
+#if 1 //duda
     task_list.global_tick = 0; /**global timer set to 0*/
     rtos_create_task(idle_task, 0, kAutoStart); /**creates the idle task with the lowest priority and set to auto start*/
-    task_list.current_task = RTOS_INVALID_TASK;
 #endif
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk
             | SysTick_CTRL_ENABLE_Msk;
     reload_systick();
+
     for (;;)
         ;
 }
@@ -173,7 +179,7 @@ static void reload_systick(void) {
 static void dispatcher(task_switch_type_e type) { /**this function handles the scheduling policies*/
     rtos_task_handle_t next_task = RTOS_INVALID_TASK; /**next task is idle task (which is equivalent to an invalid task)*/
     rtos_task_handle_t index;
-    uint8_t highest = -1; /**the highest priority is set to -1, the lowest one*/
+    int8_t highest = -1; /**the highest priority is set to -1, the lowest one*/
     for (index = 0; index < task_list.nTasks; index++)
     {
         if (highest < task_list.tasks[index].priority
@@ -193,11 +199,17 @@ static void dispatcher(task_switch_type_e type) { /**this function handles the s
 
 FORCE_INLINE static void context_switch(task_switch_type_e type) {
     register uint32_t *sp asm("sp"); //queremos una variable llamada sp equivalente al sp
-    CS_firstTime = (TRUE == CS_firstTime) ? FALSE : TRUE;
     if (FALSE == CS_firstTime)
     {
-        task_list.tasks[task_list.current_task].sp = sp; /**saves the current sp in the current task's sp*/
+        if(kFromNormalExec == type){
+            task_list.tasks[task_list.current_task].sp = sp - SP_OFFSET_NORMAL; /**saves the current sp in the current task's sp*/
+        }else{
+            task_list.tasks[task_list.current_task].sp = sp - SP_OFFSET_ISR; /**saves the current sp in the current task's sp*/
+        }
     }
+    CS_firstTime =  FALSE ;
+
+
     task_list.current_task = task_list.next_task; /**changes the current task for the next task*/
     task_list.tasks[task_list.current_task].state = S_RUNNING; /**changes current task to a running state*/
     SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk; /**calls the pendSV to make a push of the current state to the sp by setting the pendSVSET_mask*/
@@ -223,6 +235,7 @@ static void activate_waiting_tasks() {
 /**********************************************************************************/
 
 static void idle_task(void) {
+    PRINTF("LOL");
     for (;;)
     {
 
@@ -247,7 +260,8 @@ void PendSV_Handler(void) {
     register uint32_t *r0 asm("r0");
     SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;
     r0 = task_list.tasks[task_list.current_task].sp;
-    asm("add r7,r0,#0");
+    //asm("add r7,r0,#0");
+    asm("mov r7,r0");
 }
 
 /**********************************************************************************/
