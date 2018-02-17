@@ -32,7 +32,7 @@
 #define STACK_PC_OFFSET				2
 
 #define SP_OFFSET_NORMAL 9
-#define SP_OFFSET_ISR 10
+#define SP_OFFSET_ISR 9
 
 #define TRUE 1
 #define FALSE 0
@@ -204,7 +204,7 @@ FORCE_INLINE static void context_switch(task_switch_type_e type) {
         if(kFromNormalExec == type){
             task_list.tasks[task_list.current_task].sp = sp - SP_OFFSET_NORMAL; /**saves the current sp in the current task's sp*/
         }else{
-            task_list.tasks[task_list.current_task].sp = sp - SP_OFFSET_ISR; /**saves the current sp in the current task's sp*/
+            task_list.tasks[task_list.current_task].sp = sp + SP_OFFSET_ISR; /**saves the current sp in the current task's sp*/
         }
     }
     CS_firstTime =  FALSE ;
