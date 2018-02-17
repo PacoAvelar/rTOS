@@ -101,7 +101,7 @@ static uint8_t CS_firstTime = TRUE;
 void rtos_start_scheduler(void) {
 #ifdef RTOS_ENABLE_IS_ALIVE
     init_is_alive();
-    #endif
+#endif
 #if 1 //duda
     task_list.global_tick = 0; /**global timer set to 0*/
     rtos_create_task(idle_task, 0, kAutoStart); /**creates the idle task with the lowest priority and set to auto start*/
@@ -198,17 +198,22 @@ static void dispatcher(task_switch_type_e type) { /**this function handles the s
 }
 
 FORCE_INLINE static void context_switch(task_switch_type_e type) {
-    register uint32_t *sp asm("sp"); //queremos una variable llamada sp equivalente al sp
+    /**Making a pointer called sp to the real direction of sp */
+    register uint32_t *sp asm("sp");
+    /*
+     * If it isn't the first time of the execution you assign a new value to sp according to where it came from.
+     */
     if (FALSE == CS_firstTime)
     {
-        if(kFromNormalExec == type){
+        if (kFromNormalExec == type)
+        {
             task_list.tasks[task_list.current_task].sp = sp - SP_OFFSET_NORMAL; /**saves the current sp in the current task's sp*/
-        }else{
+        } else
+        {
             task_list.tasks[task_list.current_task].sp = sp + SP_OFFSET_ISR; /**saves the current sp in the current task's sp*/
         }
     }
-    CS_firstTime =  FALSE ;
-
+    CS_firstTime = FALSE;
 
     task_list.current_task = task_list.next_task; /**changes the current task for the next task*/
     task_list.tasks[task_list.current_task].state = S_RUNNING; /**changes current task to a running state*/
@@ -219,12 +224,12 @@ static void activate_waiting_tasks() {
     uint8_t index;
     for (index = 0; index < task_list.nTasks; index++)
     {
-        if (S_WAITING == task_list.tasks[index].state)  /**if the current index task is waiting*/
+        if (S_WAITING == task_list.tasks[index].state) /**if the current index task is waiting*/
         {
-            task_list.tasks[index].local_tick--;        /**decreases current index task local timer*/
+            task_list.tasks[index].local_tick--; /**decreases current index task local timer*/
             if (0 == task_list.tasks[index].local_tick) /**if current index task local timer equals zero,*/
             {
-                task_list.tasks[index].state = S_READY;    /**current index task state is changed to ready*/
+                task_list.tasks[index].state = S_READY; /**current index task state is changed to ready*/
             }
         }
     }
@@ -235,7 +240,6 @@ static void activate_waiting_tasks() {
 /**********************************************************************************/
 
 static void idle_task(void) {
-    PRINTF("LOL");
     for (;;)
     {
 
@@ -256,6 +260,11 @@ void SysTick_Handler(void) {
     reload_systick();
 }
 
+
+/*
+ * To avoid the compiler to deny the access to the SP (r7) register,
+ * we use an auxiliary register to change the SP  (r7).
+ */
 void PendSV_Handler(void) {
     register uint32_t *r0 asm("r0");
     SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;
